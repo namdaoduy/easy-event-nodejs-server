@@ -10,6 +10,8 @@ var url = 'mongodb://admin123:admin123@ds131942.mlab.com:31942/easy-event';
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+app.use(express.static('public'));
+
 app.post('/users', (req, res) => {
   MongoClient.connect(url, { useNewUrlParser: true }, async function (err, db) {
     if (err) {
