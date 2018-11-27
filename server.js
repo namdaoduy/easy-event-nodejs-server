@@ -125,5 +125,21 @@ app.post('/QR', (req, res) => {
   }
 });
 
+app.get('/events', (req, res) => {
+  MongoClient.connect(url, { useNewUrlParser: true }, async function (err, db) {
+    if (err) {
+      res.status(400);
+      res.json({ message: 'Unable to connect to the mongoDB server. Error:', err });
+    } else {
+      var projectI = db.db("easy-event");
+      
+      let result = await projectI.collection("events").find().toArray();
+      res.json(result)
+
+      db.close();
+    }
+  });
+})
+
 app.listen(port, () => console.log("Example app listening on port", port));
 
