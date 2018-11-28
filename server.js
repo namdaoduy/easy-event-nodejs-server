@@ -19,7 +19,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, database) {
 });
 
 //load all events without param "user"
-app.get('/events', (req, res) => {
+app.get('/event', (req, res) => {
   db.collection("events").find().toArray()
   .then(result => {
     res.json(result)
@@ -27,23 +27,18 @@ app.get('/events', (req, res) => {
   .catch(err => {res.json({message: err})})
 })
 
-//load events in Home screen with param "user"
-app.post('/events', (req, res) => {
-  db.collection("users").find({ _id: ObjectId(req.body.user_id) }).toArray()
-  .then(result_1 => {
-    const query = { user_id: ObjectId(result_1[0]._id) };
-
-    db.collection("events").find(query).toArray()
-    .then(result_2 => {
-      res.json(result_2)
-    })
-    .catch(err => {res.json({message: err})})
+app.post('/event', (req, res) => {
+  db.collection("events").find({
+    _id: ObjectId(req.body.event_id)
+  }).toArray()
+  .then(result => {
+    res.json(result[0])
   })
   .catch(err => {res.json({message: err})})
-});
+})
 
 //list guests of event
-app.post('/guests', (req, res) => {
+app.post('/event/guest', (req, res) => {
   db.collection("guests").find({
     eventID: ObjectId(req.body.event_id)
   }).toArray()
@@ -59,7 +54,7 @@ app.post('/guests', (req, res) => {
 })
 
 //search events
-app.put('/events', (req, res) => {
+app.post('/event/search', (req, res) => {
   db.collection("events").find({
     user_id: ObjectId(req.body.user_id),
     name: {$regex: '^(?i)' + req.body.key_word} 
@@ -76,7 +71,7 @@ app.put('/events', (req, res) => {
 });
 
 //login API
-app.post('/users', (req, res) => {
+app.post('/user/login', (req, res) => {
   db.collection("users").find({ name: req.body.name }).toArray()
   .then(result => {
     if (result.length == 0) {
@@ -94,8 +89,23 @@ app.post('/users', (req, res) => {
   .catch(err => {res.json({message: err})})
 });
 
+//load events in Home screen with param "user"
+app.post('/user/event', (req, res) => {
+  db.collection("users").find({ _id: ObjectId(req.body.user_id) }).toArray()
+  .then(result_1 => {
+    const query = { user_id: ObjectId(result_1[0]._id) };
+
+    db.collection("events").find(query).toArray()
+    .then(result_2 => {
+      res.json(result_2)
+    })
+    .catch(err => {res.json({message: err})})
+  })
+  .catch(err => {res.json({message: err})})
+});
+
 //check QR code
-app.post('/QR', (req, res) => {
+app.post('/qr', (req, res) => {
   const req_id = req.body.QRcode;
   const currentDate = new Date();
   const DYM = currentDate.getDate() + '/' + (currentDate.getMonth()+1) + '/' + currentDate.getFullYear() + ', ';
