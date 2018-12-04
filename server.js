@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const port = 3005;
 const bodyParser = require('body-parser');
+var cors = require('cors');
 const mongodb = require('mongodb');
 const MongoClient = mongodb.MongoClient;
 const ObjectId = require('mongodb').ObjectID;
@@ -9,6 +10,7 @@ const url = 'mongodb://admin123:admin123@ds131942.mlab.com:31942/easy-event';
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(cors());
 app.use(express.static('public'));
 
 let db;
