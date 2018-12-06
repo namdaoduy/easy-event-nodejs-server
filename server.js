@@ -66,6 +66,29 @@ app.post('/event/guest', (req, res) => {
   .catch(err => {res.json({message: err})})
 })
 
+// add guest
+app.put('/event/guest', (req, res) => {
+  let guest = req.body;
+  guest.email_verified = false;
+  guest.eventID = ObjectId(guest.eventID);
+  guest.accepted = false;
+  guest.check_in = {
+    checked: false,
+    timestamp: null
+  }
+  db.collection("guests").insertOne(guest)
+  .then(result => {
+    if (result.length == 0) {
+      res.json({message: "not OK"})
+    }
+    else {
+      res.json({message: "OK", result: result})
+    }   
+  })
+  .catch(err => {res.json({message: err})})
+})
+
+
 //login API
 app.post('/user/login', (req, res) => {
   db.collection("users").find({ name: req.body.name }).toArray()
