@@ -104,7 +104,7 @@ app.post('/user/event', (req, res) => {
 app.post('/user/event/search', (req, res) => {
   db.collection("events").find({
     user_id: ObjectId(req.body.user_id),
-    name: {$regex: req.body.key_word, $option: 'i'} 
+    name: {$regex: `${req.body.key_word}`, $options: 'i'} 
   }).toArray()
   .then(result => {
     if (result.length === 0) {
