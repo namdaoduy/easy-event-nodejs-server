@@ -39,6 +39,17 @@ app.post('/event', (req, res) => {
   .catch(err => {res.json({message: err})})
 })
 
+//search user events
+app.post('/event/search', (req, res) => {
+  db.collection("events").find({
+    name: {$regex: '^(?i)' + req.body.key_word} 
+  }).toArray()
+  .then(result => {
+    res.json(result)
+  })
+  .catch(err => {res.json({message: err})})
+});
+
 //list guests of event
 app.post('/event/guest', (req, res) => {
   db.collection("guests").find({
@@ -54,23 +65,6 @@ app.post('/event/guest', (req, res) => {
   })
   .catch(err => {res.json({message: err})})
 })
-
-//search events
-app.post('/event/search', (req, res) => {
-  db.collection("events").find({
-    user_id: ObjectId(req.body.user_id),
-    name: {$regex: '^(?i)' + req.body.key_word} 
-  }).toArray()
-  .then(result => {
-    if (result.length === 0) {
-      res.json({message: "not OK"});
-    }
-    else {
-      res.json({message: "OK", result: result});
-    }
-  })
-  .catch(err => {res.json({message: err})})
-});
 
 //login API
 app.post('/user/login', (req, res) => {
@@ -102,6 +96,23 @@ app.post('/user/event', (req, res) => {
       res.json(result_2)
     })
     .catch(err => {res.json({message: err})})
+  })
+  .catch(err => {res.json({message: err})})
+});
+
+//search user events
+app.post('/user/event/search', (req, res) => {
+  db.collection("events").find({
+    user_id: ObjectId(req.body.user_id),
+    name: {$regex: '^(?i)' + req.body.key_word} 
+  }).toArray()
+  .then(result => {
+    if (result.length === 0) {
+      res.json({message: "not OK"});
+    }
+    else {
+      res.json({message: "OK", result: result});
+    }
   })
   .catch(err => {res.json({message: err})})
 });
