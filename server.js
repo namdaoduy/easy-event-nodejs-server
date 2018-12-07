@@ -8,6 +8,7 @@ const mongodb = require('mongodb');
 const MongoClient = mongodb.MongoClient;
 const ObjectId = require('mongodb').ObjectID;
 const Mailer = require('./mailer')
+const QRCode = require('qrcode')
 
 const url = 'mongodb://admin123:admin123@ds131942.mlab.com:31942/easy-event';
 const salt = 'namquocsonha';
@@ -71,9 +72,32 @@ app.post('/event/guest', (req, res) => {
   .catch(err => {res.json({message: err})})
 })
 
+// Verify email
+
+// Guest Accepted
+app.post('/event/guest/accept', (req, res) => {
+  const guest = req.body;
+  db.collection("guests").updateOne({ 
+    _id: ObjectId(guest._id) 
+  }, {
+    $set: {
+      "accepted": true 
+    }
+  })
+  .then(result => {
+    QRCode.toDataURL(guest._id, (err, url) => {
+      Mailer.sendTicketEmail(guest, url)
+    })
+    res.json({message: "OK"})
+  })
+  .catch(err => {res.json({message: err})})
+})
+
 // Guest register
 app.put('/event/guest', (req, res) => {
   let guest = req.body;
+  const hash = md5(guest.email + guest.eventID + salt);
+  const link = `${home_url}/verify/${hash}?guest=${guest.email}&eventid=${guest.eventID}`
   guest.email_verified = false;
   guest.eventID = ObjectId(guest.eventID);
   guest.accepted = false;
@@ -83,14 +107,8 @@ app.put('/event/guest', (req, res) => {
   }
   db.collection("guests").insertOne(guest)
   .then(result => {
-    if (result.length == 0) {
-      res.json({message: "not OK"})
-    }
-    else {
-      const link = `${home_url}/verify/` + md5(guest.email + guest.eventID + salt);
-      Mailer.sendVerifyEmail(guest, link);
-      res.json({message: "OK", result: result})
-    }
+    Mailer.sendVerifyEmail(guest, link);
+    res.json({message: "OK"})
   })
   .catch(err => {res.json({message: err})})
 })
