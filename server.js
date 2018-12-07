@@ -2,11 +2,16 @@ const express = require('express');
 const app = express();
 const port = 3005;
 const bodyParser = require('body-parser');
-var cors = require('cors');
+const cors = require('cors');
+const md5 = require('md5')
 const mongodb = require('mongodb');
 const MongoClient = mongodb.MongoClient;
 const ObjectId = require('mongodb').ObjectID;
+const Mailer = require('./mailer')
+
 const url = 'mongodb://admin123:admin123@ds131942.mlab.com:31942/easy-event';
+const salt = 'namquocsonha';
+const home_url = 'http://127.0.0.1:3000'
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -66,7 +71,7 @@ app.post('/event/guest', (req, res) => {
   .catch(err => {res.json({message: err})})
 })
 
-// add guest
+// Guest register
 app.put('/event/guest', (req, res) => {
   let guest = req.body;
   guest.email_verified = false;
@@ -82,12 +87,13 @@ app.put('/event/guest', (req, res) => {
       res.json({message: "not OK"})
     }
     else {
+      const link = `${home_url}/verify/` + md5(guest.email + guest.eventID + salt);
+      Mailer.sendVerifyEmail(guest, link);
       res.json({message: "OK", result: result})
-    }   
+    }
   })
   .catch(err => {res.json({message: err})})
 })
-
 
 //login API
 app.post('/user/login', (req, res) => {
