@@ -73,6 +73,23 @@ app.post('/event/guest', (req, res) => {
 })
 
 // Verify email
+app.post('/verify', (req, res) => {
+  const { hashed, guest_email, event_id } = req.body;
+  const verified = (hashed === md5(guest_email + event_id + salt))
+  if (!verified) return res.json({message: "not OK"})
+  db.collection("guests").updateOne({ 
+    eventID: event_id,
+    email: guest_email
+  }, {
+    $set: {
+      "email_verified": true 
+    }
+  })
+  .then(result => {
+    res.json({message: "OK"})
+  })
+  .catch(err => {res.json({message: err})})
+})
 
 // Guest Accepted
 app.post('/event/guest/accept', (req, res) => {
@@ -97,7 +114,7 @@ app.post('/event/guest/accept', (req, res) => {
 app.put('/event/guest', (req, res) => {
   let guest = req.body;
   const hash = md5(guest.email + guest.eventID + salt);
-  const link = `${home_url}/verify/${hash}?guest=${guest.email}&eventid=${guest.eventID}`
+  const link = `${home_url}/verify/${hash}/${guest.email}/${guest.eventID}`
   guest.email_verified = false;
   guest.eventID = ObjectId(guest.eventID);
   guest.accepted = false;
