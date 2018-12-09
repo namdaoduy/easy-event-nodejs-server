@@ -1,6 +1,6 @@
 #!/bin/sh
 
-git filter-branch --env-filter -f '
+git filter-branch --env-filter --force '
 
 OLD_EMAIL="gotit@Gotits-MacBook-Pro.local"
 CORRECT_NAME="namdaoduy"
