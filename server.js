@@ -9,10 +9,12 @@ const MongoClient = mongodb.MongoClient;
 const ObjectId = require('mongodb').ObjectID;
 const Mailer = require('./mailer')
 const QRCode = require('qrcode')
+const jwt = require('jsonwebtoken')
 
 const url = 'mongodb://admin123:admin123@ds131942.mlab.com:31942/easy-event';
 const salt = 'namquocsonha';
 const home_url = 'http://127.0.0.1:3000'
+const jwt_key = 'shenevaknows'
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -26,7 +28,7 @@ MongoClient.connect(url, { useNewUrlParser: true }, function(err, database) {
   console.log("Database OK");
 });
 
-//load all events without param "user"
+// Load all events without param "user"
 app.get('/event', (req, res) => {
   db.collection("events").find().toArray()
   .then(result => {
@@ -45,7 +47,7 @@ app.post('/event', (req, res) => {
   .catch(err => {res.json({message: err})})
 })
 
-//search user events
+// Search user events
 app.post('/event/search', (req, res) => {
   db.collection("events").find({
     name: {$regex: `${req.body.key_word}`, $options: 'i'} 
@@ -56,7 +58,7 @@ app.post('/event/search', (req, res) => {
   .catch(err => {res.json({message: err})})
 });
 
-//list guests of event
+// List guests of event
 app.post('/event/guest', (req, res) => {
   db.collection("guests").find({
     eventID: ObjectId(req.body.event_id)
@@ -91,25 +93,6 @@ app.post('/verify', (req, res) => {
   .catch(err => {res.json({message: err})})
 })
 
-// Guest Accepted
-app.post('/event/guest/accept', (req, res) => {
-  const guest = req.body;
-  db.collection("guests").updateOne({ 
-    _id: ObjectId(guest._id) 
-  }, {
-    $set: {
-      "accepted": true 
-    }
-  })
-  .then(result => {
-    QRCode.toDataURL(guest._id, (err, url) => {
-      Mailer.sendTicketEmail(guest, url)
-    })
-    res.json({message: "OK"})
-  })
-  .catch(err => {res.json({message: err})})
-})
-
 // Guest register
 app.put('/event/guest', (req, res) => {
   let guest = req.body;
@@ -130,26 +113,30 @@ app.put('/event/guest', (req, res) => {
   .catch(err => {res.json({message: err})})
 })
 
-//login API
+// Login API
 app.post('/user/login', (req, res) => {
-  db.collection("users").find({ name: req.body.name }).toArray()
+  db.collection("users").findOne({ 
+    username: req.body.username,
+    password: req.body.password
+  })
   .then(result => {
-    if (result.length == 0) {
-      res.json({message: "not OK"})
-    }
-    else {
-      if (result[0].password == req.body.password) {
-        res.json({message: "OK", user_id: result[0]._id})
-      }
-      else {
-        res.json({message: "not OK"})
-      }
-    }
+    if (result.length == 0)
+      return res.json({message: "not OK"})
+    jwt.sign({ uid: result._id }, jwt_key, {expiresIn: '1d'}, function(err, token) {
+      if (err) return res.json({error: err})
+      res.json({
+        message: "OK", 
+        token: token,
+        user_id: result._id,
+        username: result.username,
+        name: result.name
+      }) 
+    });
   })
   .catch(err => {res.json({message: err})})
 });
 
-//load events in Home screen with param "user"
+// Load events in Home screen with param "user"
 app.post('/user/event', (req, res) => {
   db.collection("users").find({ _id: ObjectId(req.body.user_id) }).toArray()
   .then(result_1 => {
@@ -164,7 +151,7 @@ app.post('/user/event', (req, res) => {
   .catch(err => {res.json({message: err})})
 });
 
-//search user events
+// Search user events
 app.post('/user/event/search', (req, res) => {
   db.collection("events").find({
     user_id: ObjectId(req.body.user_id),
@@ -181,7 +168,47 @@ app.post('/user/event/search', (req, res) => {
   .catch(err => {res.json({message: err})})
 });
 
-//check QR code
+// --------- Authorization Middleware ---------
+app.use(function(req, res, next) {
+  if (!req.headers.authorization) {
+    return res.status(403).json({ error: 'No credentials sent!' });
+  }
+  const token = req.headers.authorization.split(" ")[1];
+  jwt.verify(token, jwt_key, (err, decoded) => {
+    if (err) return res.json({error: err})
+    if (req.body.user_id !== decoded.uid) return res.json({error: 'Auth failed'})
+    next();
+  });
+});
+
+// --- All protected requests go after this ---
+// * Request header must have: Authorization
+// * Request body must have: user_id
+
+app.get('/test', (req, res) => {
+  return res.json({'status': 'test token'})
+})
+
+// Guest Accepted
+app.post('/event/guest/accept', (req, res) => {
+  const guest = req.body;
+  db.collection("guests")
+  .updateOne({ _id: ObjectId(guest._id) }, { $set: { "accepted": true } })
+  .then(result => {
+    db.collection("guests")
+    .findOne({ _id: ObjectId(guest._id) })
+    .then(res => {
+      QRCode.toDataURL(JSON.stringify(res._id), (err, url) => {
+        Mailer.sendTicketEmail(res, url)
+      })
+      res.json({message: "OK"})
+    })
+    .catch(err => {res.json({message: err})})
+  })
+  .catch(err => {res.json({message: err})})
+})
+
+// Check QR code
 app.post('/qr', (req, res) => {
   const req_id = req.body.QRcode;
   const currentDate = new Date();
