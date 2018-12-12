@@ -121,11 +121,11 @@ app.post('/user/login', (req, res) => {
   })
   .then(result => {
     if (result.length == 0)
-      return res.json({message: "not OK"})
-    jwt.sign({ uid: result._id }, jwt_key, {expiresIn: '1d'}, function(err, token) {
+      return res.json({error: "User not found"})
+    jwt.sign({ uid: result._id }, jwt_key, {expiresIn: '6h'}, function(err, token) {
       if (err) return res.json({error: err})
       res.json({
-        message: "OK", 
+        success: true, 
         token: token,
         user_id: result._id,
         username: result.username,
@@ -133,7 +133,7 @@ app.post('/user/login', (req, res) => {
       }) 
     });
   })
-  .catch(err => {res.json({message: err})})
+  .catch(err => {res.json({error: err})})
 });
 
 // Load events in Home screen with param "user"
@@ -185,7 +185,7 @@ app.use(function(req, res, next) {
 // * Request header must have: Authorization
 // * Request body must have: user_id
 
-app.get('/test', (req, res) => {
+app.post('/test', (req, res) => {
   return res.json({'status': 'test token'})
 })
 
