@@ -25,13 +25,12 @@ class _Mailer {
     }
 
     this.transporter.sendMail(mailOptions, (error, info) => {
-      if (error) return console.log(error)
-      console.log(info);
+      if (error) return console.log("-----x---> Sent error")
+      console.log("---------> Sent!");
     })
   }
 
   sendTicketEmail(user, dataImage) {
-    console.log(dataImage)
     let mailOptions = {
       from: `Easy Event <${this.USER}>`,
       to: user.email,
@@ -48,8 +47,8 @@ class _Mailer {
     }
 
     this.transporter.sendMail(mailOptions, (error, info) => {
-      if (error) return console.log(error)
-      console.log(info);
+      if (error) return console.log("-----x---> Sent error")
+      console.log("---------> Sent!");
     })
   }
 }

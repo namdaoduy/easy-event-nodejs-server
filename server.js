@@ -113,6 +113,19 @@ app.put('/event/guest', (req, res) => {
   .catch(err => {res.json({message: err})})
 })
 
+// Signup API
+app.post('/user/signup', (req, res) => {
+  db.collection("users").findOne({ 
+    username: req.body.username
+  })
+  .then(result => {
+    if (result.length != 0)
+      return res.json({error: "Username is exist"})
+    
+  })
+  .catch(err => {res.json({error: err})})
+});
+
 // Login API
 app.post('/user/login', (req, res) => {
   db.collection("users").findOne({ 
@@ -122,7 +135,7 @@ app.post('/user/login', (req, res) => {
   .then(result => {
     if (result.length == 0)
       return res.json({error: "User not found"})
-    jwt.sign({ uid: result._id }, jwt_key, {expiresIn: '6h'}, function(err, token) {
+    jwt.sign({ user_id: result._id }, jwt_key, {expiresIn: '6h'}, function(err, token) {
       if (err) return res.json({error: err})
       res.json({
         success: true, 
@@ -176,14 +189,13 @@ app.use(function(req, res, next) {
   const token = req.headers.authorization.split(" ")[1];
   jwt.verify(token, jwt_key, (err, decoded) => {
     if (err) return res.json({error: err})
-    if (req.body.user_id !== decoded.uid) return res.json({error: 'Auth failed'})
+    req.user_id = decoded._id;
     next();
   });
 });
 
 // --- All protected requests go after this ---
 // * Request header must have: Authorization
-// * Request body must have: user_id
 
 app.post('/test', (req, res) => {
   return res.json({'status': 'test token'})
@@ -198,10 +210,10 @@ app.post('/event/guest/accept', (req, res) => {
     db.collection("guests")
     .findOne({ _id: ObjectId(guest._id) })
     .then(res => {
-      QRCode.toDataURL(JSON.stringify(res._id), (err, url) => {
+      QRCode.toDataURL(res._id.toString(), (err, url) => {
         Mailer.sendTicketEmail(res, url)
       })
-      res.json({message: "OK"})
+      return res.json({message: "OK"})
     })
     .catch(err => {res.json({message: err})})
   })
@@ -215,27 +227,19 @@ app.post('/qr', (req, res) => {
   const DYM = currentDate.getDate() + '/' + (currentDate.getMonth()+1) + '/' + currentDate.getFullYear() + ', ';
   const time = currentDate.toLocaleTimeString(currentDate);
 
-  db.collection("guests").find({
-    _id: ObjectId(req_id) 
-  }).toArray()
+  db.collection("guests").findOne({ _id: ObjectId(req_id)})
   .then(result_1 => {
     if (result_1.length == 0) {
       res.json({ message: 'No guest ID in database.' })
     }
-    else if (result_1[0].eventID != req.body.event_id) {
+    else if (result_1.eventID != req.body.event_id) {
       res.json({ message: 'No guest ID in database.' })
     }
-    else if (result_1[0].check_in.checked == false) {
-      db.collection("guests").updateOne({ 
-        _id: ObjectId(req_id) 
-      }, { 
-        $set: { 
-          "check_in.timestamp": DYM + time, 
-          "check_in.checked": true 
-        } 
-      })
+    else if (result_1.check_in.checked == false) {
+      db.collection("guests").updateOne({ _id: ObjectId(req_id) }, 
+      { $set: { "check_in.timestamp": DYM + time, "check_in.checked": true }})
       .then(result_2 => {
-        res.json({ message: 'Done.', time: DYM + time, name: result_1[0].name })
+        res.json({ message: 'Done.', time: DYM + time, name: result_1.name })
       })
     }
     else {
@@ -244,4 +248,4 @@ app.post('/qr', (req, res) => {
   })
 });
 
-app.listen(port, () => console.log("Example app listening on port", port));
+app.listen(port, () => console.log("Easy Event listening on port", port));
