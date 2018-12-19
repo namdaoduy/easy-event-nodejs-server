@@ -10,6 +10,7 @@ const ObjectId = require('mongodb').ObjectID;
 const Mailer = require('./mailer')
 const QRCode = require('qrcode')
 const jwt = require('jsonwebtoken')
+const fs = require('fs')
 
 const url = 'mongodb://admin123:admin123@ds131942.mlab.com:31942/easy-event';
 const salt = 'namquocsonha';
@@ -194,13 +195,6 @@ app.use(function(req, res, next) {
   });
 });
 
-// --- All protected requests go after this ---
-// * Request header must have: Authorization
-
-app.post('/test', (req, res) => {
-  return res.json({'status': 'test token'})
-})
-
 // Guest Accepted
 app.post('/event/guest/accept', (req, res) => {
   const guest = req.body;
@@ -247,5 +241,33 @@ app.post('/qr', (req, res) => {
     }
   })
 });
+
+// --- All protected requests go after this ---
+// * Request header must have: Authorization
+
+// Add event
+app.put('/user/event', (req, res) => {
+  let event = req.body;
+  event.user_id = ObjectId(req.user_id);
+  if (event.dataURI) {
+    let base64 = event.dataURI.split(';base64,').pop();
+    const name = `image-${Date.now()}.png`;
+    fs.writeFile("./public/images/" + name, base64, {encoding: 'base64'}, function(err) {
+      console.log('File created');
+    });
+    event.dataURI = "https://api.namdaoduy.tk/easy-event/images/" + name;
+  }
+  db.collection("events").insertOne(event)
+  .then(result => {
+    res.json({success: "OK"})
+  })
+  .catch(err => {res.json({error: err})})
+});
+
+app.post('/test', (req, res) => {
+  return res.json({'status': 'test token'})
+})
+
+
 
 app.listen(port, () => console.log("Easy Event listening on port", port));
